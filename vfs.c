@@ -147,6 +147,25 @@ int main()
                 }
                 continue;
             }
+            else if(_stricmp(command[0], "close" == 0))
+            {
+                ret = CloseFileByName(command[1]);
+
+                if(ret == -1)
+                {
+                    printf("ERROR: There is no such file!!!\n");
+                }
+                continue;
+            }
+            else if(_stricmp(command[0], "rm" == 0))
+            {
+                ret = rm_File(command[1]);
+                if(ret == -1)
+                {
+                    printf("ERROR: There is no such file!!!\n");
+                }
+                continue;
+            }
 
         }
     }
@@ -337,4 +356,67 @@ int fstat_file(int fd)
     printf("----------------------------------------------------------");
 
     return 0;
+}
+
+int CloseFileByName(char *name)
+{
+    int i = 0;
+    i = GetFDFromName(name);
+
+    if(i ==-1)
+    {
+        return -1;
+    }
+    UFDTArr[i].ptrfiletable->readoffset = 0;
+    UFDTArr[i].ptrfiletable->writeoffset = 0;
+    (UFDTArr[i].ptrfiletable->ptrinode->ReferenceCount)--;
+
+    return 0;
+}
+
+int GetFDFromName(char *name)
+{
+    int i = 0;
+
+    while(i < 50)
+    {
+        if(UFDTArr[i].ptrfiletable != NULL)
+        {
+            if(stricmp((UFDTArr[i].ptrfiletable->ptrinode->FileName), name) == 0)
+                break;
+        }
+        i++;
+    }
+
+    if(i == 50)
+    {
+        return -1;
+    }
+    else
+    {
+        return i;
+    }
+}
+
+int rm_File(char *name)
+{
+    int fd = 0;
+
+    fd = GetFDFromName(name);
+
+    if(fd == -1)
+    {
+        return -1;
+    }
+
+    (UFDTArr[fd].ptrfiletable->ptrinode->LinkCount)--;
+
+    if(UFDTArr[fd].ptrfiletable->ptrinode->LinkCount == 0)
+    {
+        UFDTArr[fd].ptrfiletable->ptrinode->FileType = 0;
+        free(UFDTArr[fd].ptrfiletable);
+    }
+
+     UFDTArr[fd].ptrfiletable = NULL;
+    (SUPERBLOCKobj.FreeInodes)++;
 }
