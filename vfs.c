@@ -118,18 +118,18 @@ void ls_file()
         return;
     }
 
-    printf("\nFile Name\tInode number\tFile Size\tLink Count\n");
-    printf("-----------------------------------------------------------");
+    printf("File Name\tInode number\tFile Size\tLink Count\n");
+    printf("-----------------------------------------------------------\n");
 
     while(temp != NULL)
     {
         if(temp->FileType != 0)
         {
-            printf("%s\t%d\t%d\t%d\t%d\n", temp->FileName, temp->InodeNumber, temp->FileSize, temp->LinkCount);
+            printf("%s\t\t%d\t\t%d\t\t%d\n", temp->FileName, temp->InodeNumber, temp->FileSize, temp->LinkCount);
         }
         temp = temp->next;
     }
-    printf("-----------------------------------------------------------");
+    printf("-----------------------------------------------------------\n");
 }
 
 void CloseAllFile()
@@ -206,7 +206,7 @@ int stat_file(char *name)
     {
         printf("File permission: Read and Write\n");
     }
-    printf("----------------------------------------------------------");
+    printf("----------------------------------------------------------\n");
     return 0;
 }
 
@@ -246,23 +246,7 @@ int fstat_file(int fd)
     {
         printf("File permission: Read and Write\n");
     }
-    printf("----------------------------------------------------------");
-
-    return 0;
-}
-
-int CloseFileByName(char *name)
-{
-    int i = 0;
-    i = GetFDFromName(name);
-
-    if(i ==-1)
-    {
-        return -1;
-    }
-    UFDTArr[i].ptrfiletable->readoffset = 0;
-    UFDTArr[i].ptrfiletable->writeoffset = 0;
-    (UFDTArr[i].ptrfiletable->ptrinode->ReferenceCount)--;
+    printf("----------------------------------------------------------\n");
 
     return 0;
 }
@@ -289,6 +273,22 @@ int GetFDFromName(char *name)
     {
         return i;
     }
+}
+
+int CloseFileByName(char *name)
+{
+    int i = 0;
+    i = GetFDFromName(name);
+
+    if(i ==-1)
+    {
+        return -1;
+    }
+    UFDTArr[i].ptrfiletable->readoffset = 0;
+    UFDTArr[i].ptrfiletable->writeoffset = 0;
+    (UFDTArr[i].ptrfiletable->ptrinode->ReferenceCount)--;
+
+    return 0;
 }
 
 int rm_File(char *name)
@@ -413,6 +413,103 @@ int WriteFile(int fd, char *arr, int isize)
     (UFDTArr[fd].ptrfiletable->ptrinode->FileActualSize) = (UFDTArr[fd].ptrfiletable->ptrinode->FileActualSize) + isize;
 
     return isize;
+}
+
+int truncate_File(char *name)
+{
+    int fd = GetFDFromName(name);
+    if(fd == -1)
+    {
+        return -1;
+    }
+
+    memset(UFDTArr[fd].ptrfiletable->ptrinode->Buffer, 0, 1024);
+    UFDTArr[fd].ptrfiletable->readoffset = 0;
+    UFDTArr[fd].ptrfiletable->writeoffset = 0;
+    UFDTArr[fd].ptrfiletable->ptrinode->FileActualSize = 0;
+}
+
+PINODE Get_Inode(char *name)
+{
+    PINODE temp = head;
+
+    if(name == NULL)
+    {
+        return NULL;
+    }
+
+    while(temp != NULL)
+    {
+        if(strcmp(name, temp->FileName) == 0)
+        {
+            break;
+        }
+        temp = temp->next;
+    }
+
+    return temp;
+}
+int CreateFile(char *name, int Permission)
+{
+    int i = 0;
+    PINODE temp = head;
+
+    if((name == NULL) || (Permission == 0) || (Permission > 3))
+    {
+        return -1;
+    }
+    if(SUPERBLOCKobj.FreeInodes = 0)
+    {
+        return -2;
+    }
+    if(Get_Inode(name) != NULL)
+    {
+        return -3;
+    }
+
+    (SUPERBLOCKobj.FreeInodes)--;
+
+    while(temp != NULL)
+    {
+        if(temp->FileType == 0)
+        {
+            break;
+        }
+        temp = temp->next;
+    }
+
+    while(i < 50)
+    {
+        if(UFDTArr[i].ptrfiletable == NULL)
+        {
+            break;
+        }
+        i++;
+    }
+
+    UFDTArr[i].ptrfiletable = (PFILETABLE)malloc(sizeof(FILETABLE));
+    if(UFDTArr[i].ptrfiletable == NULL)
+        {
+            return -4;
+        }
+
+    UFDTArr[i].ptrfiletable->count = 1;
+    UFDTArr[i].ptrfiletable->mode = Permission;
+    UFDTArr[i].ptrfiletable->readoffset = 0;
+    UFDTArr[i].ptrfiletable->writeoffset = 0;
+
+    UFDTArr[i].ptrfiletable->ptrinode = temp;
+    strcpy(UFDTArr[i].ptrfiletable->ptrinode->FileName, name);
+    UFDTArr[i].ptrfiletable->ptrinode->FileType = REGULAR;
+    UFDTArr[i].ptrfiletable->ptrinode->ReferenceCount = 1;
+    UFDTArr[i].ptrfiletable->ptrinode->LinkCount = 1;
+    UFDTArr[i].ptrfiletable->ptrinode->FileSize = MAXFILESIZE;
+    UFDTArr[i].ptrfiletable->ptrinode->FileActualSize = 0;
+    UFDTArr[i].ptrfiletable->ptrinode->Permission = Permission;
+    UFDTArr[i].ptrfiletable->ptrinode->Buffer = (char *)malloc(MAXFILESIZE);
+    memset(UFDTArr[i].ptrfiletable->ptrinode->Buffer, 0, 1024);
+
+    return i;
 }
 int main()
 {
@@ -552,7 +649,50 @@ int main()
                     printf("ERROR: It is not a regular file!!!\n");
                 }
             }
+            else if(_stricmp(command[0], "truncate") == 0)
+            {
+                ret = truncate_File(command[1]);
 
+                if(ret == -1)
+                {
+                    printf("ERROR: Incorrect parameters!!!\n");
+                    continue;
+                }
+            }
+            else
+            {
+                printf("ERROR: Command not found!!!\n");
+                continue;
+            }
+        }
+        else if(count == 3)
+        {
+            if(_stricmp(command[0], "create") == 0)
+            {
+                ret = CreateFile(command[1], atoi(command[2]));
+
+                if(ret >= 0)
+                {
+                    printf("File is successfully created with file descriptor: %d\n", ret);
+                }
+                if(ret == -1)
+                {
+                    printf("ERROR: Incorrect parameters!!!\n");
+                }
+                if(ret == -2)
+                {
+                    printf("ERROR: There are no inodes!!!\n");
+                }
+                if(ret == -3)
+                {
+                    printf("ERROR: File already exists!!!\n");
+                }
+                if(ret == -4)
+                {
+                    printf("ERROR: Memory allocation failure!!!\n");
+                }
+                continue;
+            }
         }
     }
     return 0;
