@@ -118,6 +118,7 @@ void ls_file()
         return;
     }
 
+    printf("-----------------------------------------------------------\n");
     printf("File Name\tInode number\tFile Size\tLink Count\n");
     printf("-----------------------------------------------------------\n");
 
@@ -125,7 +126,7 @@ void ls_file()
     {
         if(temp->FileType != 0)
         {
-            printf("%s\t\t%d\t\t%d\t\t%d\n", temp->FileName, temp->InodeNumber, temp->FileSize, temp->LinkCount);
+            printf("%s\t\t%d\t\t%d\t\t%d\n", temp->FileName, temp->InodeNumber, temp->FileActualSize, temp->LinkCount);
         }
         temp = temp->next;
     }
@@ -151,6 +152,7 @@ void DisplayHelp()
 {
     printf("ls : To list out all the files\n");
     printf("clear : To clear console\n");
+    printf("create : Create a new file\n");
     printf("open : Open specific file\n");
     printf("close : Close specific file\n");
     printf("closeall : Close all the opened files\n");
@@ -206,7 +208,7 @@ int stat_file(char *name)
     {
         printf("File permission: Read and Write\n");
     }
-    printf("----------------------------------------------------------\n");
+    printf("------------------------------------------------------------------\n");
     return 0;
 }
 
@@ -246,7 +248,7 @@ int fstat_file(int fd)
     {
         printf("File permission: Read and Write\n");
     }
-    printf("----------------------------------------------------------\n");
+    printf("------------------------------------------------------------------\n");
 
     return 0;
 }
@@ -390,7 +392,7 @@ void man(char *name)
 
 int WriteFile(int fd, char *arr, int isize)
 {
-    if(((UFDTArr[fd].ptrfiletable->mode) != WRITE && (UFDTArr[fd].ptrfiletable->mode) != READ+WRITE))
+    if(((UFDTArr[fd].ptrfiletable->mode) != WRITE) && (UFDTArr[fd].ptrfiletable->mode) != READ+WRITE)
     {
         return -1;
     }
@@ -449,6 +451,7 @@ PINODE Get_Inode(char *name)
 
     return temp;
 }
+
 int CreateFile(char *name, int Permission)
 {
     int i = 0;
@@ -458,7 +461,7 @@ int CreateFile(char *name, int Permission)
     {
         return -1;
     }
-    if(SUPERBLOCKobj.FreeInodes = 0)
+    if(SUPERBLOCKobj.FreeInodes == 0)
     {
         return -2;
     }
@@ -489,9 +492,9 @@ int CreateFile(char *name, int Permission)
 
     UFDTArr[i].ptrfiletable = (PFILETABLE)malloc(sizeof(FILETABLE));
     if(UFDTArr[i].ptrfiletable == NULL)
-        {
-            return -4;
-        }
+    {
+        return -4;
+    }
 
     UFDTArr[i].ptrfiletable->count = 1;
     UFDTArr[i].ptrfiletable->mode = Permission;
@@ -511,6 +514,109 @@ int CreateFile(char *name, int Permission)
 
     return i;
 }
+
+int OpenFile(char *name, int mode)
+{
+    int i = 0;
+
+    PINODE temp = NULL;
+
+    if(name == NULL || mode <= 0)
+    {
+        return -1;
+    }
+
+    temp = Get_Inode(name);
+
+    if(temp == NULL)
+    {
+        return -2;
+    }
+
+    if(temp->Permission < mode)
+    {
+        return -3;
+    }
+
+    while(i < 50)
+    {
+        if(UFDTArr[i].ptrfiletable == NULL)
+        {
+            break;
+        }
+        i++;
+    }
+
+    UFDTArr[i].ptrfiletable = (PFILETABLE)malloc(sizeof(FILETABLE));
+
+    if(UFDTArr[i].ptrfiletable == NULL)
+    {
+        return -1;
+    }
+
+    UFDTArr[i].ptrfiletable->count = 1;
+    UFDTArr[i].ptrfiletable->mode = mode;
+
+    if (mode == READ + WRITE)
+    {
+        UFDTArr[i].ptrfiletable->readoffset = 0;
+        UFDTArr[i].ptrfiletable->writeoffset = 0;
+    }
+    else if(mode == READ)
+    {
+        UFDTArr[i].ptrfiletable->readoffset = 0;
+    }
+    else if(mode == WRITE)
+    {
+        UFDTArr[i].ptrfiletable->writeoffset = 0;
+    }
+
+    UFDTArr[i].ptrfiletable->ptrinode = temp;
+    (UFDTArr[i].ptrfiletable->ptrinode->ReferenceCount)++;
+
+    return i;
+}
+
+int ReadFile(int fd, char *arr, int isize)
+{
+    int read_size = 0;
+
+    if(UFDTArr[fd].ptrfiletable == NULL)
+    {
+        return -1;
+    }
+    if((UFDTArr[fd].ptrfiletable->mode != READ) && (UFDTArr[fd].ptrfiletable->mode != READ + WRITE))
+    {
+           return -2;
+    }
+    if((UFDTArr[fd].ptrfiletable->ptrinode->Permission != READ) && (UFDTArr[fd].ptrfiletable->ptrinode->Permission != READ + WRITE))
+    {
+           return -2;
+    }
+    if(UFDTArr[fd].ptrfiletable->readoffset == UFDTArr[fd].ptrfiletable->ptrinode->FileActualSize)
+    {
+        return -3;
+    }
+    if(UFDTArr[fd].ptrfiletable->ptrinode->FileType != REGULAR)
+    {
+        return -4;
+    }
+    read_size = (UFDTArr[fd].ptrfiletable->ptrinode->FileActualSize) - (UFDTArr[fd].ptrfiletable->readoffset);
+
+    if(read_size < isize)
+    {
+        strncpy(arr, (UFDTArr[fd].ptrfiletable->ptrinode->Buffer) + (UFDTArr[fd].ptrfiletable->readoffset), read_size);
+        UFDTArr[fd].ptrfiletable->readoffset = UFDTArr[fd].ptrfiletable->readoffset + read_size;
+    }
+    else
+    {
+        strncpy(arr, (UFDTArr[fd].ptrfiletable->ptrinode->Buffer) + (UFDTArr[fd].ptrfiletable->readoffset), isize);
+        UFDTArr[fd].ptrfiletable->readoffset = UFDTArr[fd].ptrfiletable->readoffset + isize;
+    }
+
+    return isize;
+}
+
 int main()
 {
     char *ptr = NULL;
@@ -605,7 +711,14 @@ int main()
             }
             else if(_stricmp(command[0], "rm") == 0)
             {
-                ret = rm_File(command[1]);
+                char ans;
+                printf("Do you want to permanently delete this file?[y/N]");
+                scanf("%s", &ans);
+                if(ans == 'y' || ans == 'Y')
+                {
+                    ret = rm_File(command[1]);
+                }
+
                 if(ret == -1)
                 {
                     printf("ERROR: There is no such file!!!\n");
@@ -691,6 +804,80 @@ int main()
                 {
                     printf("ERROR: Memory allocation failure!!!\n");
                 }
+                continue;
+            }
+            else if(_stricmp(command[0], "open") == 0)
+            {
+                ret = OpenFile(command[1], atoi(command[2]));
+
+                if(ret >= 0)
+                {
+                    printf("File is successfully opened with file descriptor: %d\n", ret);
+                }
+                if(ret == -1)
+                {
+                    printf("ERROR: Incorrect parameters!!!\n");
+                }
+                if(ret == -2)
+                {
+                    printf("ERROR: File not present!!!\n");
+                }
+                if(ret == -3)
+                {
+                    printf("ERROR: Permission denied!!!\n");
+                }
+                continue;
+            }
+            else if(_stricmp(command[0], "read") == 0)
+            {
+                fd = GetFDFromName(command[1]);
+
+                if(fd == -1)
+                {
+                    printf("ERROR: Incorrect Parameters!!!\n");
+                    continue;
+                }
+
+                ptr = (char *)malloc(atoi(command[2]) + 1);
+
+                if(ptr == NULL)
+                {
+                    printf("ERROR: Memory allocation failure\n");
+                    continue;
+                }
+
+                ret = ReadFile(fd, ptr, atoi(command[2]));
+
+                if(ret == -1)
+                {
+                    printf("ERROR: File does not exist!!!");
+                }
+                if(ret == -2)
+                {
+                    printf("ERROR: Permission denied!!!");
+                }
+                if(ret == -3)
+                {
+                    printf("ERROR: Reached at the end of file!!!");
+                }
+                if(ret == -4)
+                {
+                    printf("ERROR: It is not a regular file!!!\n");
+                }
+                if(ret == 0)
+                {
+                    printf("ERROR: File is empty");
+                }
+                if(ret > 0)
+                {
+                    _write(2, ptr, ret);
+                }
+                printf("\n");
+                continue;
+            }
+            else
+            {
+                printf("ERROR: Command not found!!!\n");
                 continue;
             }
         }
