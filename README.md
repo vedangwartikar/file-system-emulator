@@ -1,6 +1,10 @@
 # virtual-file-system
 Virtual UNIX/Linux File Subsystem that resides on the RAM
 
+<div align="center">
+    <img src="https://github.com/vedangwartikar/virtual-file-system/blob/master/vfs.png" width="427" height="317"/>
+</div>
+
 # VFS
 __Virtual File System__
 - - - -
