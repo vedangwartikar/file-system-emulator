@@ -1,13 +1,14 @@
 # virtual-file-system
 Virtual UNIX/Linux File Subsystem that resides on the RAM
 
+# VFS
+__Virtual File System__
+- - - -
+
 <div align="center">
     <img src="https://github.com/vedangwartikar/virtual-file-system/blob/master/vfs.png" width="427" height="317"/>
 </div>
 
-# VFS
-__Virtual File System__
-- - - -
 Virtual File System provides multiple functionalities that are similar to the UNIX/Linux File Subsystem. It provides necessary commands and system call implementations of the file system through customized shell. All necessary data structures of file system like Incore Inode Table, File Table, User File Descriptor Table are implemented. The entire file manipulation occurs on RAM and does not affect any secondary storage device.
 
 
