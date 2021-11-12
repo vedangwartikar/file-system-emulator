@@ -1,17 +1,17 @@
-# virtual-file-system
-Virtual UNIX/Linux File Subsystem that resides on the RAM
+# file-system-emulator
+TThe File System Emulator (FSE) is a UNIX/Linux File Subsystem that resides on the RAM
 <br>
-Give it a try - https://repl.it/@vedangwartikar/virtual-file-system
+Give it a try - https://repl.it/@vedangwartikar/file-system-emulator
 
-# VFS
-__Virtual File System__
+# FSE
+__File System Emulator__
 - - - -
 
 <div align="center">
-    <img src="https://github.com/vedangwartikar/virtual-file-system/blob/master/vfs.png" width="427" height="317"/>
+    <img src="https://github.com/vedangwartikar/file-system-emulator/blob/master/vfs.png" width="427" height="317"/>
 </div>
 
-Virtual File System provides multiple functionalities that are similar to the UNIX/Linux File Subsystem. It provides necessary commands and system call implementations of the file system through customized shell. All necessary data structures of file system like Incore Inode Table, File Table, User File Descriptor Table are implemented. The entire file manipulation occurs on RAM and does not affect any secondary storage device.
+File System Emulator provides multiple functionalities that are similar to the UNIX/Linux File Subsystem. It provides necessary commands and system call implementations of the file system through customized shell. All necessary data structures of file system like Incore Inode Table, File Table, User File Descriptor Table are implemented. The entire file manipulation occurs on RAM and does not affect any secondary storage device.
 
 
 Command | Description
