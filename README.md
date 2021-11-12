@@ -1,5 +1,5 @@
 # file-system-emulator
-TThe File System Emulator (FSE) is a UNIX/Linux File Subsystem that resides on the RAM
+The File System Emulator (FSE) is a UNIX/Linux File Subsystem that resides on the RAM
 <br>
 Give it a try - https://repl.it/@vedangwartikar/file-system-emulator
 
